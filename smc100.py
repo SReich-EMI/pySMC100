@@ -178,18 +178,79 @@ class SMC100(object):
   def stop(self):
     self.sendcmd('ST')
 
-  def get_status(self):
+  def query(self, cmd, retry=10):
+      """
+      just simple function for sending a command with expected response
+      """
+      return self._sendcmd(command=cmd, argument='?', expect_response=True, retry=retry)
+
+  def write(self, cmd, retry=False):
+      """
+      just simplte function for sending a command without an expected response
+      """
+      command = cmd.split(' ')[0]
+      try:
+          argument = cmd.split(' ')[1]
+      except:
+          argument= ''
+      self._sendcmd(command=command, argument=argument, expect_response=False, retry=retry)
+
+  def get_status(self, silent=False):
     """
     Executes TS? and returns the the error code as integer and state as string
     as specified on pages 64 - 65 of the manual.
     """
 
-    resp = self.sendcmd('TS', '?', expect_response=True, retry=10)
+    resp = self.query('TS')
     errors = int(resp[0:4], 16)
     state = resp[4:]
 
     assert len(state) == 2
 
+    if not silent:
+        print('status of', self.name, '\n  errors:', errors)
+        if state == '0A':
+            print('  state: NOT REFERENCED from reset')
+        elif state == '0B':
+            print('  state: NOT REFERENCED from HOMING')
+        elif state == '0C':
+            print('  state: NOT REFERENCED from CONFIGURATION')
+        elif state == '0D':
+            print('  state: NOT REFERENCED from DISABLE')
+        elif state == '0E':
+            print('  state: NOT REFERENCED from READY')
+        elif state == '0F':
+            print('  state: NOT REFERENCED from MOVING')
+        elif state == '10':
+            print('  state: NOT REFERENCED ESP stage error')
+        elif state == '11':
+            print('  state: NOT REFERENCED from JOGGING')
+        elif state == '14':
+            print('  state: CONFIGURATION')
+        elif state == '1E':
+            print('  state: HOMING commanded from RS-232-C')
+        elif state == '1F':
+            print('  state: HOMING commanded by SMC-RC')
+        elif state == '28':
+            print('  state: MOVING')
+        elif state == '32':
+            print('  state: READY from HOMING')
+        elif state == '33':
+            print('  state: READY from MOVING')
+        elif state == '34':
+            print('  state: READY from DISABLE')
+        elif state == '35':
+            print('  state: READY from JOGGING')
+        elif state == '3C':
+            print('  state: DISABLE from READY')
+        elif state == '3D':
+            print('  state: DISABLE from MOVING')
+        elif state == '3E':
+            print('  state: DISABLE from JOGGING')
+        elif state == '46':
+            print('  state: JOGGING from READY')
+        elif state == '47':
+            print('  state: JOGGING from DISABLE')
     return errors, state
 
   def get_position_mm(self):
